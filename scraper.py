@@ -29,7 +29,8 @@ def main():
 			rssobject = WhizRssAggregator(sys.argv[1])				 
 		else:
 			print ("usage:"+ sys.argv[0] + " subredditname")
-	except Exception as e:
-		print (str(e)
+	except:
+		print ("Unexpected error:", sys.exc_info()[0])
 
 main()
+
