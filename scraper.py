@@ -1,4 +1,5 @@
-#!/usr/bin/python
+from __future__ import print_function
+import builtins as __builtin__
 import feedparser
 import re
 import sys
@@ -6,78 +7,112 @@ import urllib.request
 import os
 
 class WhizRssAggregator():
-	feedurl = ""
-	subreddit = ""
-	pwd = os.path.dirname(os.path.abspath(__file__))
+	
+	def debug(self, value = None):
+		if not value is None:
+			self.debug = value
+		return self.debug
 
-	def __init__(self, subreddit):
+	def print(self, *args, **kwargs):
+		if self.debug:
+			return __builtin__.print(*args, **kwargs)
+
+	def __init__(self, cachedir, subreddit):
+		try:
+			self.print("WhizRssAggregator cacheing %s images to %s" % (subreddit, cachedir))
+			self.cachedir = cachedir
+			self.pwd = os.path.dirname(os.path.abspath(__file__))
+			#self.print ("PWD: %s" % self.pwd)
+			path = os.path.join(self.pwd, self.cachedir)
+			self.print ("Cache path: %s" % path)
+			if os.path.isdir(path):
+				self.print("%s already exists" % path)
+			else:
+    				os.mkdir(path)
+    				self.print ("Successfully created the directory %s " %path)
+		except OSError:  
+			print("OS error: {0}".format(err)) 
+	
 		if subreddit != "":
 			self.subreddit = subreddit
 			self.feedurl = 'https://reddit.com/r/'+subreddit+".rss"
-			self.parse()
 		else:
 			raise RuntimeError("Null or Empty subreddit name")
-			
-	def parse(self):
-		link_regex = r"<span><a href=\"((http[s]?):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?\">\[link\]<\/a><\/span>"
+
+	def fetchfeed(self):
 		print("Getting Feed Data for %s " % self.subreddit)
 		thefeed = feedparser.parse(self.feedurl)
-		print(thefeed['feed'])
-		print(thefeed['feed']['title'])
-		print(thefeed.feed.subtitle)
-		print(len(thefeed['entries']))
-		print("__________")
+		self.print(thefeed['feed'])
+		return thefeed
+
+	def parsefeed(self):
+		thefeed = self.fetchfeed()
+		self.print(thefeed['feed']['title'])
+		try:
+			self.print(thefeed.feed.subtitle)
+		except:	
+			self.print("/n")	
+		print("%s Entries" % len(thefeed['entries']))
+		return thefeed
+
+	def parseentries(self, thefeed):
+		link_regex = r"<span><a href=\"((http[s]?):\/)?\/?([^:\/\s]+)((\/\w+)*\/)([\w\-\.]+[^#?\s]+)(.*)?(#[\w\-]+)?\">\[link\]<\/a><\/span>"
+		self.print("__________")
 		testfordir=True
 		for thefeedentry in thefeed.entries:
-			print(thefeedentry['id'])
-			print(thefeedentry['title'])
-			print(thefeedentry['tags'])
-			print(thefeedentry['link'])
-			print(thefeedentry['author'])
-			print(thefeedentry['summary'])
+			self.print(thefeedentry['id'])
+			self.print(thefeedentry['title'])
+			self.print(thefeedentry['tags'])
+			self.print(thefeedentry['link'])
+			self.print(thefeedentry['author'])
+			self.print(thefeedentry['summary'])
 			for content in thefeedentry['content']:
 				link = re.search(link_regex, content['value'])
-				link_href = content['value'][link.start()+15:link.end()-19]
-				print(link_href)
-				href_split = re.split('\/',link_href)
-				path = os.path.join(self.pwd,'imagecache',self.subreddit)
-				file = os.path.join(path,href_split[len(href_split)-1])
-				if file.endswith(".jpg") and not os.path.exists(file):
-					try:
-						#if there are images to fetch, check to see if we've set up the
-						#folder for the current subreddit
-						if testfordir:
-						#there's no use checking in every iteration of the loop
-							if os.path.isdir(path):
-								print("%s already exists" % path)
-							else:
-    								os.mkdir(path)
-    								print ("Successfully created the directory %s " % path)
-							testfordir = False
-						urllib.request.urlretrieve(link_href,file)
-					except OSError:  
-    						print ("Creation of the directory %s failed" % path)
-					except:	
-						print("Error on: %s" % link_href)
-			print("__________")
+				if not link == None:
+					if (link.start()+15 < link.end()-19): 
+						link_href = content['value'][link.start()+15:link.end()-19]
+						self.print(link_href)
+						href_split = re.split('\/',link_href)
+						subreddit_path = os.path.join(self.pwd, self.cachedir ,self.subreddit)
+						file = os.path.join(subreddit_path,href_split[len(href_split)-1])
+						if file.endswith(".jpg") and not os.path.exists(file):
+							try:
+								#if there are images to fetch, check to see if we've set up the
+								#folder for the current subreddit
+								if testfordir:
+								#there's no use checking in every iteration of the loop
+									if os.path.isdir(subreddit_path):
+										print("%s already exists" % subreddit_path)
+									else:
+    										os.mkdir(subreddit_path)
+    										print ("Successfully created the directory %s " % subreddit_path)
+									testfordir = False
+								urllib.request.urlretrieve(link_href,file)
+							except urllib.error.HTTPError as http_err:
+								print(http_err)
+								print("Processing: %s" % link_href)
+							except OSError as err: 
+								print("OS error: %s" % format(err)) 
+								print("** error: %s" % err.errno) 
+								print("** file: %s" % err.filename) 
+							except:	
+								print("Unexpected Error:", sys.exc_info()[0])
+				self.print("__________")
+
+	def parse(self):
+		thefeed = self.parsefeed()
+		self.parseentries(thefeed)
 
 def main():
 	try:
-		pwd = os.path.dirname(os.path.abspath(__file__))
-		path = os.path.join(pwd,'imagecache')
-		if os.path.isdir(path):
-			print("%s already exists" % path)
-		else:
-    			os.mkdir(path)
-    			print ("Successfully created the directory %s " % path)
 		if len(sys.argv) == 2:
-			rssobject = WhizRssAggregator(sys.argv[1])				 
+			rssobject = WhizRssAggregator('imagecache', sys.argv[1])
+			rssobject.debug(False)
+			rssobject.parse()
 		else:
 			print ("usage:"+ sys.argv[0] + " subredditname")
-	
-	except OSError:  
-    		print ("Creation of the directory %s failed" % path)
-	except:
+	except Exception as e:	
 		print ("Unexpected error:", sys.exc_info()[0])
+		print ("Unexpected error:", e)
 main()
 
