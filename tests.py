@@ -51,8 +51,10 @@ class TestParse(unittest.TestCase):
 			self.assertNotEqual(buf.getvalue(),"")
 
 
+	@mock.patch('scraper.WhizRssAggregator.parseentries')
+	@mock.patch('scraper.WhizRssAggregator.parsefeed')
 	@mock.patch('scraper.WhizRssAggregator.fetchfeed')
-	def test_parse_with_mock(self, fetchfeed_mock):
+	def test_parse_with_mock(self, fetchfeed_mock, parsefeed_mock, parseentries_mock):
 		print("test_parse_with_mock")
 		self.assertTrue(os.path.isfile(os.path.join(self.pwd,'sample.feed')))
 		testfeed = feedparser.parse(os.path.join(self.pwd,'sample.feed'))
@@ -61,9 +63,14 @@ class TestParse(unittest.TestCase):
 		test_obj = WhizRssAggregator(self.cachedir, "spaceporn")
 		test_obj.debug(True)
 		fetchfeed_mock.return_value=testfeed
+		parsefeed_mock.return_value=testfeed['entries']
 		test_obj.parse()
-		self.assertTrue(test_obj.entries==25)		
+		#self.assertTrue(test_obj.entries==25)		
 		self.assertTrue(fetchfeed_mock.called)		
+		self.assertTrue(parsefeed_mock.called)		
+		self.assertTrue(parsefeed_mock.calledwith(testfeed))		
+		self.assertTrue(parseentries_mock.called)		
+		self.assertTrue(parseentries_mock.calledwith(testfeed['entries']))		
 
 
 if __name__ == "__main__":
