@@ -9,6 +9,7 @@ verify_ssl = true
 requests = "*"
 feedparser = "*"
 mocking = "*"
+magicmock = "*"
 
 [requires]
 python_version = "3.6"
