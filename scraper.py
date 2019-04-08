@@ -46,9 +46,10 @@ class WhizRssAggregator():
 
 	def fetchfeed(self):
 		print("Getting Feed Data for %s " % self.subreddit)
-		feedurl = 'https://reddit.com/r/'+subreddit+".rss"
+		feedurl = 'https://reddit.com/r/'+self.subreddit+".rss"
 		if self.debug and not self.testing:
 			urllib.request.urlretrieve(feedurl,self.subreddit+".feed")
+		self.print(feedurl)
 		thefeed = feedparser.parse(feedurl)
 		self.print(thefeed['feed'])
 		return thefeed
@@ -58,7 +59,7 @@ class WhizRssAggregator():
 		try:
 			self.print(thefeed.feed.subtitle)
 		except:	
-			self.print("/n")
+			self.print("\n")
 		self.entries = len(thefeed['entries'])
 		print("%s Entries" % self.entries)
 		return thefeed['entries']
@@ -129,8 +130,8 @@ def main():
 	try:
 		if len(sys.argv) == 2:
 			rssobject = WhizRssAggregator('imagecache', sys.argv[1])
-			rssobject.debug(False)
-			rssobject.testing(False)
+			rssobject.debug(True)
+			rssobject.testing(True)
 			rssobject.parse()
 		else:
 			print ("usage:"+ sys.argv[0] + " subredditname")
